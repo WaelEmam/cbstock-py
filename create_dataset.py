@@ -7,6 +7,8 @@ import time
 import requests
 from couchbase.admin import Admin
 from couchbase.bucket import Bucket
+from couchbase.cluster import Cluster, ClusterOptions
+from couchbase_core.cluster import PasswordAuthenticator
 from requests.auth import HTTPDigestAuth, HTTPBasicAuth
 
 import settings
@@ -35,16 +37,6 @@ def admin_create_bucket(sdk_admin):
         print(
             "!!! Error creating the bucket {0}:\n{1}\nExecute cleanup.py and try again".format(bucket_name,
                                                                                                sys.exc_info()))
-
-
-def add_indexes(bucket_manager):
-    try:
-        print("Creating primary index on {0}...".format(bucket_name))
-        bucket_manager.n1ql_index_create_primary(ignore_exists=True)
-        print("Indexes created successfully!")
-    except:
-        print("!!! Error creating indexes:\n{0}\nExecute cleanup.py and try again".format(sys.exc_info()))
-
 
 def add_stocks(sdk_client):
     print("Loading dataset...")
@@ -87,8 +79,8 @@ if __name__ == '__main__':
     time.sleep(timeout)
     sdk_client = Bucket('couchbase://{0}/{1}'.format(node, bucket_name), username=user, password=password)
     sdk_client.timeout = timeout
-    bucket_manager = sdk_client.bucket_manager();
     add_stocks(sdk_client)
-    add_indexes(bucket_manager)
+    cluster = Cluster('couchbase://{0}'.format(node), ClusterOptions(PasswordAuthenticator(user, password)))
+    cluster.query_indexes().create_primary_index(bucket_name)
     add_fts_indexes()
 
